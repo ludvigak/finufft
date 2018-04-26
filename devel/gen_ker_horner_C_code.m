@@ -23,17 +23,23 @@ if nargin==0, test_gen_ker_horner_C_code; return; end
 if nargin<4, o=[]; end
 
 C = ker_ppval_coeff_mat(w,d,be,o);
-str = cell(w,1);
-for i=1:w   % loop over segments of kernel
-  s = sprintf('ker[%d] = ',i-1);
-  for n=1:d
-    s = [s sprintf('%.16E + z*(',C(n,i))];   % (n-1)th coeff for i'th segment
+str = cell(d+1,1);
+for n=1:d % loop over poly coeffs
+  s = sprintf('FLT c%d[] = {%.16E',n-1, C(n,1));
+  for i=2:w % loop over segments
+    s = sprintf('%s, %.16E', s, C(n,i));      
   end
-  s = [s sprintf('%.16E)',C(end,i))];
-  for n=1:d-1, s = [s sprintf(')')]; end  % close all parens
-  s = [s sprintf(';\n')];          % terminate the C line, CR
-  str{i} = s;
+  str{n} = [s sprintf('};\n')];
 end
+
+s = sprintf('for (int i=0; i<%d; i++) ker[i] = ',w);
+for n=1:d-1
+  s = [s sprintf('c%d[i] + z*(',n-1)];   % (n-1)th coeff for i'th segment
+end
+s = [s sprintf('c%d[i]',d-1)];
+for n=1:d-1, s = [s sprintf(')')]; end  % close all parens
+s = [s sprintf(';\n')];          % terminate the C line, CR
+str{d+1} = s;
 
 %%%%%%%%
 function test_gen_ker_horner_C_code    % writes C code to file but doesn't test.
