@@ -663,12 +663,9 @@ void interp_cube(FLT *target,FLT *du, FLT *ker1, FLT *ker2, FLT *ker3,
       }
     }
   } else {                         // wraps somewhere: use ptr list (slower)
-    BIGINT j1[MAX_NSPREAD], j2[MAX_NSPREAD], j3[MAX_NSPREAD];   // 1d ptr lists
-    BIGINT x=i1, y=i2, z=i3;         // initialize coords
+    BIGINT j2[MAX_NSPREAD], j3[MAX_NSPREAD];   // 1d ptr lists
+    BIGINT y=i2, z=i3;         // initialize coords
     for (int d=0; d<ns; d++) {          // set up ptr lists
-      if (x<0) x+=N1;
-      if (x>=N1) x-=N1;
-      j1[d] = x++;
       if (y<0) y+=N2;
       if (y>=N2) y-=N2;
       j2[d] = y++;
@@ -681,11 +678,35 @@ void interp_cube(FLT *target,FLT *du, FLT *ker1, FLT *ker2, FLT *ker3,
       for (int dy=0; dy<ns; dy++) {
 	BIGINT oy = oz + N1*j2[dy];           // offset due to y & z
 	FLT ker23 = ker2[dy]*ker3[dz];	
-	for (int dx=0; dx<ns; dx++) {
-	  FLT k = ker1[dx]*ker23;
-	  BIGINT j = oy + j1[dx];
-	  out[0] += du[2*j] * k;
-	  out[1] += du[2*j+1] * k;
+	BIGINT j = oy+i1;
+	// Avoid ptr adressing in inner loop
+	bool wraps_left = i1<0;
+	bool wraps_right = i1+ns>=N1;
+	if (wraps_left || wraps_right) {
+	  int mid;
+	  if (wraps_left) {
+	    mid = -i1;
+	    j += N1;
+	  } else {
+	    mid = N1-i1;
+	  }
+	  for (int dx=0; dx<mid; ++dx) {
+	    out[0] += du[2*j]*ker1[dx]*ker23;
+	    out[1] += du[2*j+1]*ker1[dx]*ker23;
+	    ++j;
+	  }
+	  j -= N1;
+	  for (int dx=mid; dx<ns; ++dx) {
+	    out[0] += du[2*j]*ker1[dx]*ker23;
+	    out[1] += du[2*j+1]*ker1[dx]*ker23;
+	    ++j;
+	  }
+	} else {                                   // doesn't wrap
+	  for (int dx=0; dx<ns; ++dx) {
+	    out[0] += du[2*j]*ker1[dx]*ker23;
+	    out[1] += du[2*j+1]*ker1[dx]*ker23;
+	    ++j;
+	  }	  
 	}
       }
     }
