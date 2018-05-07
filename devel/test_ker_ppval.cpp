@@ -78,8 +78,7 @@ static inline void kernel_vector_Horner(FLT *ker, FLT z, int w)
    See: gen_all_horner_C_code.m
 */
 {
-  //#include "../src/ker_horner_allw.c"
-#include "../src/ker_horner_allw_loop.c"
+  #include "ker_allw.c"
 }
 
 int main(int argc, char* argv[])
