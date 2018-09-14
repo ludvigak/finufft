@@ -725,7 +725,18 @@ void interp_cube(FLT *target,FLT *du, FLT *ker1, FLT *ker2, FLT *ker3,
 // dx,dy,dz indices into ker array, j index in complex du array.
 // Barnett 6/16/17
 {
-  FLT out[] = {0.0, 0.0};  
+  // Output data buffer, size of one row
+  FLT buf[2*MAX_NSPREAD];
+  for (int dx=0; dx<2*ns; dx++) buf[dx] = 0;
+  // Kernel line buffer, for direct mult with complex vals
+  FLT ker1cpx[2*MAX_NSPREAD];
+  for (int dx=0; dx<ns; dx++) {
+    ker1cpx[2*dx] = ker1[dx];
+    ker1cpx[2*dx+1] = ker1[dx];
+  }
+  // Grid data buffer
+  FLT data[2*MAX_NSPREAD];
+  // Start interpolation
   if (i1>=0 && i1+ns<=N1 && i2>=0 && i2+ns<=N2 && i3>=0 && i3+ns<=N3) {
     // no wrapping: avoid ptrs
     for (int dz=0; dz<ns; dz++) {
@@ -733,12 +744,11 @@ void interp_cube(FLT *target,FLT *du, FLT *ker1, FLT *ker2, FLT *ker3,
       for (int dy=0; dy<ns; dy++) {
 	BIGINT j = oz + N1*(i2+dy) + i1;
 	FLT ker23 = ker2[dy]*ker3[dz];
-	for (int dx=0; dx<ns; dx++) {
-	  FLT k = ker1[dx]*ker23;
-	  out[0] += du[2*j] * k;
-	  out[1] += du[2*j+1] * k;
-	  ++j;
+	// Multiply data and kernel lines and add to buffer
+	for (int dx=0; dx<2*ns; dx++) {
+	  buf[dx] += du[2*j+dx]*ker1cpx[dx]*ker23;
 	}
+	j += ns;
       }
     }
   } else {                         // wraps somewhere: use ptr list (slower)
@@ -759,16 +769,27 @@ void interp_cube(FLT *target,FLT *du, FLT *ker1, FLT *ker2, FLT *ker3,
       BIGINT oz = N1*N2*j3[dz];               // offset due to z
       for (int dy=0; dy<ns; dy++) {
 	BIGINT oy = oz + N1*j2[dy];           // offset due to y & z
-	FLT ker23 = ker2[dy]*ker3[dz];	
+	FLT ker23 = ker2[dy]*ker3[dz];
+	// Extract wrapped grid data into buffer line
 	for (int dx=0; dx<ns; dx++) {
-	  FLT k = ker1[dx]*ker23;
 	  BIGINT j = oy + j1[dx];
-	  out[0] += du[2*j] * k;
-	  out[1] += du[2*j+1] * k;
+	  data[2*dx] = du[2*j];
+	  data[2*dx+1] = du[2*j+1];
+	}
+	// Multiply data and kernel lines and add to buffer
+	for (int dx=0; dx<2*ns; dx++) {
+	  buf[dx] += data[dx]*ker1cpx[dx]*ker23;
 	}
       }
     }
   }
+  // Reduce output buffer
+  FLT out[] = {0.0, 0.0};
+  for (int dx=0; dx<ns; dx++) {
+    out[0] += buf[2*dx];
+    out[1] += buf[2*dx+1];
+  }
+  // Write
   target[0] = out[0];
   target[1] = out[1];  
 }
