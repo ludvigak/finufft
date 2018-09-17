@@ -56,6 +56,10 @@ int spreadinterp(BIGINT N1, BIGINT N2, BIGINT N3, FLT *data_uniform,
 		 BIGINT M, FLT *kx, FLT *ky, FLT *kz,
 		 FLT *data_nonuniform, spread_opts opts);
 
+int spreadinterp_real(BIGINT N1, BIGINT N2, BIGINT N3, FLT *data_uniform,
+		      BIGINT M, FLT *kx, FLT *ky, FLT *kz,
+		      FLT *data_nonuniform, spread_opts opts);
+
 int spreadcheck(BIGINT N1, BIGINT N2, BIGINT N3,
                  BIGINT M, FLT *kx, FLT *ky, FLT *kz,
                  spread_opts opts);
