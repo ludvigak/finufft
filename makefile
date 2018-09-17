@@ -179,6 +179,8 @@ perftest: test/spreadtestnd test/finufft1d_test test/finufft2d_test test/finufft
 	(cd test; ./nuffttestnd.sh 2>&1 | tee results/nuffttestnd_results.txt)
 test/spreadtestnd: test/spreadtestnd.cpp $(SOBJS) $(HEADERS)
 	$(CXX) $(CXXFLAGS) test/spreadtestnd.cpp $(SOBJS) -o test/spreadtestnd
+test/spreadtestnd_real: test/spreadtestnd_real.cpp $(SOBJS) $(HEADERS)
+	$(CXX) $(CXXFLAGS) test/spreadtestnd_real.cpp $(SOBJS) -o test/spreadtestnd_real
 
 # spreader only test (useful for development work on spreader)...
 spreadtest: test/spreadtestnd
