@@ -1,5 +1,5 @@
 # Makefile for FINUFFT.
-# Barnett 7/30/18
+# Barnett 9/24/18
 
 # This is the only makefile; there are no makefiles in subdirectories.
 # Users should not need to edit this makefile (doing so would make it hard to
@@ -14,9 +14,10 @@ CC=gcc
 FC=gfortran
 CLINK=-lstdc++
 FLINK=$(CLINK)
-# compile flags for baseline single-threaded, double precision case...
-# (note -Ofast breaks isfinite() and isnan(), so use -O3 which now is as fast)
-CFLAGS   = -fPIC -O3 -funroll-loops -march=native
+# compile flags for GCC, baseline single-threaded, double precision case...
+# Notes: 1) -Ofast breaks isfinite() & isnan(), so use -O3 which now is as fast
+#        2) -fcx-limited-range for fortran-speed complex arith in C++
+CFLAGS   = -fPIC -O3 -funroll-loops -march=native -fcx-limited-range
 # tell examples where to find header files...
 CFLAGS   += -I src
 FFLAGS   = $(CFLAGS)
@@ -38,6 +39,7 @@ OFLAGS=
 MWRAP=mwrap
 
 # For your OS, override the above by placing make variables in make.inc ...
+# (Please look in make.inc.* for ideas)
 -include make.inc
 
 # choose the precision (affects library names, test precisions)...
@@ -57,14 +59,14 @@ endif
 FFTW = $(FFTWNAME)$(PRECSUFFIX)
 LIBSFFT = -l$(FFTW) $(LIBS)
 
-# multi-threaded libs & flags needed (see defns above)...
+# multi-threaded libs & flags (see defs above; note fftw3_threads slower)...
 ifneq ($(OMP),OFF)
 CXXFLAGS += $(OMPFLAGS)
 CFLAGS += $(OMPFLAGS)
 FFLAGS += $(OMPFLAGS)
 MFLAGS += $(MOMPFLAGS)
 OFLAGS += $(OOMPFLAGS)
-LIBSFFT += -l$(FFTW)_threads
+LIBSFFT += -l$(FFTW)_omp
 endif
 
 # decide name of obj files and finufft library we're building...
@@ -72,13 +74,12 @@ LIBNAME=libfinufft$(PRECSUFFIX)
 DYNAMICLIB = lib/$(LIBNAME).so
 STATICLIB = lib-static/$(LIBNAME).a
 
-
 # ======================================================================
 
 # objects to compile: spreader...
 SOBJS = src/spreadinterp.o src/utils.o
 # for NUFFT library and its testers...
-OBJS = $(SOBJS) src/finufft1d.o src/finufft2d.o src/finufft3d.o src/dirft1d.o src/dirft2d.o src/dirft3d.o src/common.o contrib/legendre_rule_fast.o src/finufft_c.o fortran/finufft_f.o
+OBJS = $(SOBJS) src/finufft1d.o src/finufft2d.o src/finufft3d.o src/dirft1d.o src/dirft2d.o src/dirft3d.o src/common.o contrib/legendre_rule_fast.o fortran/finufft_f.o
 # just the dimensions (1,2,3) separately...
 OBJS1 = $(SOBJS) src/finufft1d.o src/dirft1d.o src/common.o contrib/legendre_rule_fast.o
 OBJS2 = $(SOBJS) src/finufft2d.o src/dirft2d.o src/common.o contrib/legendre_rule_fast.o
@@ -86,7 +87,7 @@ OBJS3 = $(SOBJS) src/finufft3d.o src/dirft3d.o src/common.o contrib/legendre_rul
 # for Fortran interface demos...
 FOBJS = fortran/dirft1d.o fortran/dirft2d.o fortran/dirft3d.o fortran/dirft1df.o fortran/dirft2df.o fortran/dirft3df.o fortran/prini.o
 
-HEADERS = src/spreadinterp.h src/finufft.h src/dirft.h src/common.h src/utils.h src/finufft_c.h fortran/finufft_f.h
+HEADERS = src/spreadinterp.h src/finufft.h src/dirft.h src/common.h src/defs.h src/utils.h fortran/finufft_f.h
 
 .PHONY: usage lib examples test perftest fortran matlab octave all mex python python3 clean objclean pyclean mexclean
 
@@ -125,7 +126,7 @@ usage:
 %.o: %.f %.h
 	$(FC) -c $(FFLAGS) $< -o $@
 
-# included code dependency...
+# included auto-generated code dependency...
 src/spreadinterp.o: src/ker_horner_allw_loop.c src/ker_lowupsampfac_horner_allw_loop.c
 
 # build the library...
@@ -250,7 +251,7 @@ endif
 
 # ------------- Various obscure/devel tests -----------------
 # This was for a CCQ application; zgemm was 10x faster!
-manysmallprobs: $(STATICLIB) $(HEADERS) test/manysmallprobs.cpp
+test/manysmallprobs: $(STATICLIB) $(HEADERS) test/manysmallprobs.cpp
 	$(CXX) $(CXXFLAGS) test/manysmallprobs.cpp $(STATICLIB) -o test/manysmallprobs $(LIBSFFT)
 	(export OMP_NUM_THREADS=1; time test/manysmallprobs; unset OMP_NUM_THREADS)
 
@@ -259,7 +260,7 @@ manysmallprobs: $(STATICLIB) $(HEADERS) test/manysmallprobs.cpp
 clean: objclean pyclean
 	rm -f lib-static/*.a lib/*.so
 	rm -f matlab/*.mex*
-	rm -f test/spreadtestnd test/finufft?d_test test/testutils test/manysmallprobs test/results/*.out fortran/nufft?d_demo fortran/nufft?d_demof examples/example1d1 examples/example1d1c examples/example1d1f examples/example1d1cf
+	rm -f test/spreadtestnd test/finufft?d_test test/finufft?d_test test/testutils test/manysmallprobs test/results/*.out fortran/*_demo fortran/*_demof examples/example1d1 examples/example1d1c examples/example1d1f examples/example1d1cf
 
 # this is needed before changing precision or threading...
 objclean:
@@ -271,4 +272,4 @@ pyclean:
 
 # for experts; only do this if you have mwrap to rebuild the interfaces!
 mexclean:
-	rm -f matlab/finufft.cpp matlab/finufft?d?.m matlab/finufft.mex*
+	rm -f matlab/finufft.cpp matlab/finufft?d?.m matlab/finufft?d?many.m matlab/finufft.mex*

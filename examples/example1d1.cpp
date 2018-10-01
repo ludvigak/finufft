@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
    Double-precision version (see example1d1f for single-precision)
 
    Compile with:
-   g++ -fopenmp example1d1.cpp -I ../src ../lib-static/libfinufft.a -o example1d1  -lfftw3 -lfftw3_threads -lm
+   g++ -fopenmp example1d1.cpp -I ../src ../lib-static/libfinufft.a -o example1d1  -lfftw3 -lfftw3_omp -lm
    or if you have built a single-core version:
    g++ example1d1.cpp -I ../src ../lib-static/libfinufft.a -o example1d1 -lfftw3 -lm
 
@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
   int M = 1e6;            // number of nonuniform points
   int N = 1e6;            // number of modes
   double acc = 1e-9;      // desired accuracy
-  nufft_opts opts; finufft_default_opts(opts);
+  nufft_opts opts; finufft_default_opts(&opts);
   complex<double> I = complex<double>(0.0,1.0);  // the imaginary unit
   
   // generate some random nonuniform points (x) and complex strengths (c):
