@@ -12,15 +12,19 @@ tests = []
 #tests.append({"dim":3, "M":1e7, "N":1e7, "tol":1e-3})
 #tests.append({"dim":3, "M":1e7, "N":1e7, "tol":1e-8})
 
-tests.append({"dim":3, "M":1e5, "N":1e5, "tol":1e-15})
-tests.append({"dim":3, "M":1e6, "N":1e6, "tol":1e-15})
-tests.append({"dim":3, "M":1e7, "N":1e7, "tol":1e-15})
+#tests.append({"dim":3, "M":1e5, "N":1e5, "tol":1e-15})
+#tests.append({"dim":3, "M":1e6, "N":1e6, "tol":1e-15})
+#tests.append({"dim":3, "M":1e7, "N":1e7, "tol":1e-15})
 
+tests.append({"dim":3, "M":1e7, "N":1e7, "tol":1e-11})
+
+# best of # runs
+bestof = 5
 
 # Flags to send
 flags = "1"
 
-# Make flags (eg OMP=OFF)
+# Make flags (eg OMP=OFF, PREC=SINGLE)
 makeflags = ""
 
 # Command template
@@ -58,12 +62,11 @@ def runTests():
     results = []
     for params in tests:
         cmd = cmdtemplate % params
-        # Best of 3
         interp_speed = 0
         interp_err = 0
         spread_speed = 0
         spread_err = 0
-        for i in [1,2,3]:
+        for i in range(bestof):
             output = runCommand(cmd).rstrip()
             ms = spreadre.search(output)
             mi = interpre.search(output)
@@ -122,6 +125,7 @@ print ""
 
 for idx,params in enumerate(tests):
     print "=== Test: dim=%(dim)d, M=%(M)g, N=%(N)g, tol=%(tol)g" % params
+    print "=== Command: " + res_A[idx]["cmd"]
     print header
     c = commit_A
     r = res_A[idx]
